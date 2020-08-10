@@ -1,0 +1,78 @@
+---
+title: "Weight Tracker"
+output: html_notebook
+---
+
+# Introduction
+
+This will track and try to make sense of changes in weight over time. The data will have to be manually recorded on an Excel workbook.
+
+
+# Packages etc
+
+```{r}
+pacman::p_load(
+  openxlsx, tidyverse, plotly
+)
+
+```
+Data 
+
+
+```{r}
+data <- readxl::read_excel("weight_over_time.xlsx", sheet = "raw_data", col_types = c("date", "skip", "numeric", "skip"))
+
+```
+
+# Find AM and PM
+
+```{r}
+delta_data <- 
+  data %>% 
+    mutate(
+      tod = ifelse(lubridate::am(date), "AM", "PM")
+    ) %>% 
+    mutate(
+      day_alone = lubridate::as_date(date)
+    ) %>% 
+    select(day_alone, tod, weight) %>% 
+    group_by(day_alone, tod) %>% 
+  #  summarise(mn_weight = mean(weight))
+    summarise( min_max_weight = case_when(
+      tod[1] == "AM" ~ min(weight),
+      tod[1] == "PM" ~ max(weight)
+      )
+    )
+
+
+  
+
+
+```
+
+Now to visualise 
+
+
+```{r}
+delta_data %>% 
+  ggplot(aes(x = day_alone, y = min_max_weight, group = tod, colour = tod, shape = tod)) + 
+  geom_point()
+
+```
+
+
+
+And linear regression
+
+```{r}
+mod <- lm(min_max_weight ~ day_alone + tod, data = delta_data)
+
+```
+
+```{r}
+summary(mod)
+
+```
+
+
+So, on the basis of this there's a statistically significant downward trend of about 0.13 kg / day, but this is dwarfted by daily variation which is around 1.3 kg / day, i.e. 10x its magnitude
