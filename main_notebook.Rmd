@@ -50,13 +50,28 @@ Now to visualise
 
 ```{r, fig.height=6, fig.width = 8}
 
+# regression model
 mod <- lm(min_max_weight ~ day_alone + tod, data = delta_data)
+
+# get equation
+# https://stackoverflow.com/questions/7549694/add-regression-line-equation-and-r2-on-graph
+
+lm_eqn <- function(m){
+  m_tidy <- broom::tidy(mod)
+  trend_point <- m_tidy %>% pluck(2, 2) %>% round(2)
+  trend_se    <- m_tidy %>% pluck(3, 2) %>% `*`(2) %>% round(2)
+  daily_point <- m_tidy %>% pluck(2, 3) %>% round(2) 
+  daily_se    <- m_tidy %>% pluck(3, 3) %>% `*`(2) %>% round(2)
+  glue::glue("Daily fall of {trend_point} (\u00b1 {trend_se})\n
+             Daily variation of {daily_point} (\u00b1 {daily_se})\n
+             Ratio: {round(abs(daily_point / trend_point), 2)}")
+}
 
 delta_data %>% 
   modelr::add_predictions(., mod) %>% 
-  ggplot(aes(x = day_alone, group = tod, colour = tod)) + 
-  geom_point(aes(y = min_max_weight, shape = tod)) + 
-  geom_line(aes(y = pred)) +
+  ggplot(aes(x = day_alone)) + 
+  geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod)) + 
+  geom_line(aes(y = pred, group = tod, colour = tod)) +
   scale_y_continuous(breaks = 72:78) + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
@@ -67,7 +82,9 @@ delta_data %>%
     x = "Date",
     y = "Weight in kg"
   ) + 
-  geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5)
+  geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5) + 
+  geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
+  geom_text(x = as.Date("2020-08-12"), y = 77.5, label = lm_eqn(mod), colour = "black", hjust = 0)
   
 ```
 
