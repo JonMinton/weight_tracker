@@ -58,13 +58,17 @@ mod <- lm(min_max_weight ~ day_alone + tod, data = delta_data)
 
 lm_eqn <- function(m){
   m_tidy <- broom::tidy(mod)
+  m_glance <- broom::glance(mod)
   trend_point <- m_tidy %>% pluck(2, 2) %>% round(2)
   trend_se    <- m_tidy %>% pluck(3, 2) %>% `*`(2) %>% round(2)
   daily_point <- m_tidy %>% pluck(2, 3) %>% round(2) 
   daily_se    <- m_tidy %>% pluck(3, 3) %>% `*`(2) %>% round(2)
+  adj_r_sq    <- m_glance$adj.r.squared[1]  %>% round(2)
   glue::glue("Daily fall of {trend_point} (\u00b1 {trend_se}) kg/ day\n
              Daily variation of {daily_point} (\u00b1 {daily_se}) kg\n
-             Ratio: {round(abs(daily_point / trend_point), 2)}")
+             Ratio: {round(abs(daily_point / trend_point), 2)}\n
+             Adjusted R-squared: {adj_r_sq}
+             ")
 }
 
 delta_data %>% 
@@ -82,7 +86,8 @@ delta_data %>%
     x = "Date",
     y = "Weight in kg",
     title = "Minimum morning and maximum evening weight over time",
-    subtitle = "Blue line: BMI of 25. Dashed line: 95% of initial weight"
+    subtitle = "Blue line: BMI of 25. Dashed line: 95% of initial weight",
+    shape = "Time of day", colour = "Time of day"
   ) + 
   geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5) + 
   geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
@@ -116,5 +121,24 @@ mod2 <- lm(min_max_weight ~ day_alone, data = delta_data)
 summary(mod2)
 
 anova(mod, mod2)
+
+```
+
+
+# Weekly summaries 
+
+
+```{r}
+delta_data %>% 
+  mutate(
+    week = lubridate::week(day_alone)
+  ) %>% 
+  group_by(week) %>% 
+  nest() %>% 
+  mutate(mdl = map(.x = data, lm, formula = min_max_weight ~ day_alone + tod, data = .))
+
+
+
+
 
 ```
