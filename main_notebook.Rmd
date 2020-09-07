@@ -73,17 +73,30 @@ lm_eqn <- function(m){
              ")
 }
 
+# First day of isoweeks 
+first_isoweeks <- delta_data %>% 
+  ungroup(day_alone) %>% 
+  mutate(isoweek = lubridate::isoweek(day_alone)) %>% 
+  mutate(ch_isoweek = isoweek != lag(isoweek)) %>% 
+  filter(ch_isoweek) %>% 
+  select(day_alone)
+
 delta_data %>% 
   modelr::add_predictions(., mod) %>% 
   ggplot(aes(x = day_alone)) + 
-  geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod)) + 
+    geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5) + 
+  geom_hline(yintercept = 69.0, linetype = "dashed", size = 1.0) +
+  geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
+  geom_vline(aes(xintercept = day_alone), data = first_isoweeks, linetype = "dashed", colour = "grey") + 
+
+  geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod), alpha = 0.7) + 
   geom_line(aes(y = pred, group = tod, colour = tod)) +
   scale_y_continuous(breaks = 68:80) + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
                labels = scales::date_format("%d %b") 
                ) + 
-  expand_limits(y = c(68, 80)) + 
+  expand_limits(y = c(68, 80)) +
   labs(
     x = "Date",
     y = "Weight in kg",
@@ -91,9 +104,7 @@ delta_data %>%
     subtitle = "Blue line: BMI of 25. Thicker dashed line: 95% of initial weight; thinner: 90.25% of initial weight",
     shape = "Time of day", colour = "Time of day"
   ) + 
-  geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5) + 
-  geom_hline(yintercept = 69.0, linetype = "dashed", size = 1.0) +
-  geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
+
   geom_text(x = as.Date("2020-08-24"), y = 77.5, label = lm_eqn(mod), colour = "black", hjust = 0) + 
   expand_limits(y = c(70, 80))
 
