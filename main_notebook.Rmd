@@ -14,7 +14,7 @@ This will track and try to make sense of changes in weight over time. The data w
 
 ```{r}
 pacman::p_load(
-  openxlsx, tidyverse, plotly
+  openxlsx, tidyverse, plotly, mgcv # for gam
 )
 
 ```
@@ -54,6 +54,8 @@ Now to visualise
 
 # regression model
 mod <- lm(min_max_weight ~ day_alone + tod, data = delta_data)
+
+# mod_gam <- gam::gam(min_max_weight ~ s(day_alone) + tod, data = ungroup(delta_data))
 
 # get equation
 # https://stackoverflow.com/questions/7549694/add-regression-line-equation-and-r2-on-graph
