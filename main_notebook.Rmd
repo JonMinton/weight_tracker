@@ -83,6 +83,14 @@ first_isoweeks <- delta_data %>%
   filter(ch_isoweek) %>% 
   select(day_alone)
 
+minimums <- 
+  delta_data %>% 
+  ungroup() %>% 
+  filter(tod == "AM") %>% 
+  mutate(min_so_far = cummin(min_max_weight)) %>% 
+  mutate(change = min_so_far < lag(min_so_far)) %>% 
+  filter(change | is.na(change))
+
 delta_data %>% 
   modelr::add_predictions(., mod) %>% 
   ggplot(aes(x = day_alone)) + 
@@ -92,6 +100,7 @@ delta_data %>%
   geom_vline(aes(xintercept = day_alone), data = first_isoweeks, linetype = "dashed", colour = "grey") + 
 
   geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod), alpha = 0.7) + 
+  geom_point(aes(y = min_so_far, x = day_alone), data = minimums, shape = 0, size = 6, inherit.aes = FALSE) + 
   geom_line(aes(y = pred, group = tod, colour = tod)) +
   scale_y_continuous(breaks = 68:80) + 
   scale_x_date(breaks = "1 week", 
@@ -103,7 +112,7 @@ delta_data %>%
     x = "Date",
     y = "Weight in kg",
     title = "Minimum morning and maximum evening weight over time",
-    subtitle = "Blue line: BMI of 25. Thicker dashed line: 95% of initial weight; thinner: 90.25% of initial weight",
+    subtitle = "Blue line: BMI of 25. Thicker dashed line: 95% of initial weight; thinner: 90.25% of initial weight. Squares indicate new lowest weights",
     shape = "Time of day", colour = "Time of day"
   ) + 
 
@@ -214,3 +223,80 @@ ggsave("coeffs_by_week.png", height = 20, width = 30, units = "cm", dpi = 300)
 
 ```
 
+Lagged fortnight?
+
+```{r}
+
+filter_fortnight <- function(x, D = delta_data){
+  D %>% 
+    mutate(week = lubridate::isoweek(day_alone)) %>% 
+    filter(week %in% c(x, x - 1))
+}
+
+mdls_by_fortnight <- 
+  tibble(
+    week = delta_data %>% # actually week ending 2 week period
+      mutate(week = lubridate::isoweek(day_alone)) %>% 
+      pull(week) %>% unique()         
+  ) %>% 
+  mutate(
+    data = map(week, filter_fortnight)
+  ) %>% 
+  mutate(n = map_dbl(data, nrow)) %>%  
+  filter(n > 3) %>%  
+  mutate(mdl = map(.x = data, ~lm(min_max_weight ~ day_alone + tod, data = .))) %>% 
+    mutate(mdl_tidy = map(mdl, broom::tidy)) %>% 
+    mutate(mdl_sum = map(mdl, broom::glance))
+
+
+mdls_by_fortnight %>% 
+  select(week, mdl_tidy) %>% 
+  unnest(mdl_tidy) %>% 
+  filter(term != "(Intercept)") %>% 
+  mutate(
+    estimate = ifelse(term == "day_alone", estimate * 7, estimate),
+    std_error = ifelse(term == "day_alone", std.error * 7, std.error)
+  ) %>% 
+  mutate(lower = estimate - 2 * std.error,
+         upper = estimate + 2 * std.error) %>% 
+  select(week, term, estimate, lower, upper) %>% 
+  left_join(
+    mdls_by_week %>% 
+      select(week, mdl_sum) %>% 
+      unnest(mdl_sum) %>% 
+      ungroup() %>%  
+      select(week, adj.r.squared)
+  ) %>% 
+  filter(week > 31) %>% 
+  mutate(Regimen = case_when(
+    week <  36 ~ "1. Time-restricted feeding",
+    week == 36 ~ "2. Mixed",
+    week >  36 ~ "3. Vegetarian Keto",
+    TRUE       ~ NA_character_
+    ) 
+  ) %>% 
+  mutate(term = case_when(
+    term == "day_alone" ~ "Change in week",
+    term == "todPM"       ~ "Within-day variation",
+    TRUE                    ~ NA_character_
+  )) %>% 
+  ggplot(aes(x = week, colour = Regimen)) + 
+  geom_point(aes(y = estimate, size = adj.r.squared, shape = Regimen)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2) + 
+  facet_wrap(~term)  +
+  geom_hline(yintercept = 0) + 
+  labs(
+    x = "Week of year (Last week)",
+    y = "Estimate in kg",
+    title = "Coefficients on trend and within-day variation by fortnights",
+    subtitle = "Error bars: Two standard errors. Point size proportional to model fit"
+  ) + 
+  guides(size = "none")
+
+ggsave("coeffs_by_fortnight.png", height = 20, width = 30, units = "cm", dpi = 300)
+
+
+
+
+
+```
