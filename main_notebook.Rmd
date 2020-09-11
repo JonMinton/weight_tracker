@@ -102,6 +102,12 @@ delta_data %>%
   geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod), alpha = 0.7) + 
   geom_point(aes(y = min_so_far, x = day_alone), data = minimums, shape = 0, size = 6, inherit.aes = FALSE) + 
   geom_line(aes(y = pred, group = tod, colour = tod)) +
+  geom_line(aes(y = min_max_weight, x = day_alone), 
+            colour = "grey", alpha = 0.5,
+            inherit.aes = FALSE, 
+            data = delta_data %>% 
+              filter(tod == "AM")
+              ) + 
   scale_y_continuous(breaks = 68:80) + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
