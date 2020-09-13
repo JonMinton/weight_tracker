@@ -14,7 +14,7 @@ This will track and try to make sense of changes in weight over time. The data w
 
 ```{r}
 pacman::p_load(
-  openxlsx, tidyverse, plotly, mgcv # for gam
+  openxlsx, tidyverse, plotly, lubridate
 )
 
 ```
@@ -304,5 +304,29 @@ ggsave("coeffs_by_fortnight.png", height = 20, width = 30, units = "cm", dpi = 3
 
 
 
+
+```
+
+
+# Change in measurements within day 
+
+```{r}
+
+data %>% 
+  mutate(is_am = am(date)) %>% 
+  filter(is_am) %>% 
+  mutate(
+    date_alone = lubridate::floor_date(date, "day"),
+    hod = lubridate::hour(date) + lubridate::minute(date) / 60
+  ) %>% 
+  mutate(days_since_today = round(interval(date_alone, today()) %/% days(1))) %>% 
+  ggplot(
+    aes(
+      x = hod, y = weight, group = date_alone, alpha = scales::rescale(days_since_today, to = c(1, 0))
+  )) + 
+  geom_point() + 
+  geom_line() + 
+  guides(alpha = "none")
+  
 
 ```
