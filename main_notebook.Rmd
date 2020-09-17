@@ -108,7 +108,10 @@ delta_data %>%
             data = delta_data %>% 
               filter(tod == "AM")
               ) + 
-  scale_y_continuous(breaks = 68:80) + 
+  scale_y_continuous(
+    breaks = 68:80,
+    sec.axis = sec_axis(trans = ~. / 6.35029, name = "Weight in stones")                 
+  ) + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
                labels = scales::date_format("%d %b") 
@@ -122,8 +125,9 @@ delta_data %>%
     shape = "Time of day", colour = "Time of day"
   ) + 
 
-  geom_text(x = as.Date("2020-08-31"), y = 77.5, label = lm_eqn(mod), colour = "black", hjust = 0) + 
-  expand_limits(y = c(70, 80))
+  geom_text(x = as.Date("2020-09-01"), y = 77.5, label = lm_eqn(mod), colour = "black", hjust = 0) + 
+  expand_limits(y = c(70, 80)) 
+
 
 ggsave("weight_chart.png", height = 20, width = 30, units = "cm", dpi = 300)
   
@@ -155,6 +159,23 @@ summary(mod2)
 anova(mod, mod2)
 
 ```
+Any weekend effect? 
+
+```{r}
+mod3 <- lm(min_max_weight ~ day_alone + is_weekend, 
+           data = delta_data %>% 
+             mutate(is_weekend = case_when(
+               lubridate::wday(day_alone) %in% c(1, 7) ~ TRUE,
+               TRUE ~ FALSE
+             ))
+             )
+
+summary(mod3)
+
+anova(mod2, mod3)
+
+```
+No convincing evidence ( p < 0.01 etc) of a systemic weekend effect, though indications of slightly higher weekend weights. (+ 0.3 kg) 
 
 
 # Weekly summaries 
@@ -216,7 +237,8 @@ mdls_by_week %>%
     title = "Coefficients on trend and within-day variation by week",
     subtitle = "Error bars: Two standard errors. Point size proportional to model fit"
   ) + 
-  guides(size = "none")
+  guides(size = "none") + 
+  scale_y_continuous(breaks = seq(-2.5, 2.5, by = 0.5), minor_breaks = seq(-2.5, 2.5, by = 0.1))
 
 ggsave("coeffs_by_week.png", height = 20, width = 30, units = "cm", dpi = 300)
 
@@ -297,7 +319,8 @@ mdls_by_fortnight %>%
     title = "Coefficients on trend and within-day variation by fortnights",
     subtitle = "Error bars: Two standard errors. Point size proportional to model fit"
   ) + 
-  guides(size = "none")
+  guides(size = "none") + 
+  scale_y_continuous(breaks = seq(-2.5, 2.5, by = 0.5), minor_breaks = seq(-2.5, 2.5, by = 0.1))
 
 ggsave("coeffs_by_fortnight.png", height = 20, width = 30, units = "cm", dpi = 300)
 
