@@ -109,14 +109,14 @@ delta_data %>%
               filter(tod == "AM")
               ) + 
   scale_y_continuous(
-    breaks = 68:80,
-    sec.axis = sec_axis(trans = ~. / 6.35029, name = "Weight in stones")                 
+    breaks = 65:80,
+    sec.axis = sec_axis(trans = ~. / 6.35029, breaks = seq(10, 13, by = 0.1), name = "Weight in stones")                 
   ) + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
                labels = scales::date_format("%d %b") 
                ) + 
-  expand_limits(y = c(68, 80)) +
+  expand_limits(y = c(65, 80)) +
   labs(
     x = "Date",
     y = "Weight in kg",
