@@ -297,7 +297,11 @@ projections_by_date %>%
   scale_y_date(breaks = "1 week", 
                minor_breaks = "1 day",
                labels = scales::date_format("%d %b") 
-  ) 
+  ) +
+  labs(
+    x = "Last date included in projection",
+    y = "First date on which 69kg weight first achieved"
+  )
 
 ```
 
