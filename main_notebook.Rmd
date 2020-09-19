@@ -47,6 +47,25 @@ delta_data <-
 
 ```
 
+Get range of morning values 
+
+```{r}
+am_range <- 
+  data %>% 
+    filter(lubridate::am(date)) %>% 
+    mutate(
+        day_alone = lubridate::as_date(date)
+    ) %>% 
+      select(day_alone, weight) %>% 
+      group_by(day_alone) %>% 
+      summarise(
+        min_am = min(weight),
+        max_am = max(weight),
+        n_meas = n()
+      )
+
+```
+
 Now to visualise 
 
 
@@ -98,7 +117,6 @@ delta_data %>%
   geom_hline(yintercept = 69.0, linetype = "dashed", size = 1.0) +
   geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
   geom_vline(aes(xintercept = day_alone), data = first_isoweeks, linetype = "dashed", colour = "grey") + 
-
   geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod), alpha = 0.7) + 
   geom_point(aes(y = min_so_far, x = day_alone), data = minimums, shape = 0, size = 6, inherit.aes = FALSE) + 
   geom_line(aes(y = pred, group = tod, colour = tod)) +
@@ -108,6 +126,22 @@ delta_data %>%
             data = delta_data %>% 
               filter(tod == "AM")
               ) + 
+  geom_linerange( # range of values within morning
+    aes(x = day_alone, ymin = min_am, ymax = max_am), 
+    inherit.aes = FALSE, data = am_range, 
+    color = "#F8766D"
+  ) +
+  geom_point( # measures withing morning,
+    aes(x = day_alone, y = weight), 
+    inherit.aes = FALSE, 
+    data = 
+      data %>% 
+      filter(lubridate::am(date)) %>% 
+      mutate(
+          day_alone = lubridate::as_date(date)
+      ),
+    alpha = 0.5, size = 0.25
+  ) +
   scale_y_continuous(
     breaks = 65:80,
     sec.axis = sec_axis(trans = ~. / 6.35029, breaks = seq(10, 13, by = 0.1), name = "Weight in stones")                 
@@ -133,7 +167,139 @@ ggsave("weight_chart.png", height = 20, width = 30, units = "cm", dpi = 300)
   
 ```
 
+And how about a projection over next 4 weeks?
 
+```{r}
+delta_data %>% 
+  modelr::add_predictions(., mod) %>% 
+  ggplot(aes(x = day_alone)) + 
+  geom_hline(yintercept = 72.7, linetype = "dashed", size = 1.5) + 
+  geom_hline(yintercept = 69.0, linetype = "dashed", size = 1.0) +
+  geom_hline(yintercept = 74.2, linetype = "solid", colour = "darkblue") +
+  geom_vline(aes(xintercept = day_alone), data = first_isoweeks, linetype = "dashed", colour = "grey") + 
+  geom_point(aes(y = min_max_weight, shape = tod, group = tod, colour = tod), alpha = 0.7) + 
+  geom_point(aes(y = min_so_far, x = day_alone), data = minimums, shape = 0, size = 6, inherit.aes = FALSE) + 
+  geom_line(aes(y = pred, group = tod, colour = tod)) +
+  geom_line(aes(y = min_max_weight, x = day_alone), 
+            colour = "grey", alpha = 0.5,
+            inherit.aes = FALSE, 
+            data = delta_data %>% 
+              filter(tod == "AM")
+              ) + 
+  geom_linerange( # range of values within morning
+    aes(x = day_alone, ymin = min_am, ymax = max_am), 
+    inherit.aes = FALSE, data = am_range, 
+    color = "#F8766D"
+  ) +
+  geom_point( # measures withing morning,
+    aes(x = day_alone, y = weight), 
+    inherit.aes = FALSE, 
+    data = 
+      data %>% 
+      filter(lubridate::am(date)) %>% 
+      mutate(
+          day_alone = lubridate::as_date(date)
+      ),
+    alpha = 0.5, size = 0.25
+  ) +
+  scale_y_continuous(
+    breaks = 65:80,
+    sec.axis = sec_axis(trans = ~. / 6.35029, breaks = seq(10, 13, by = 0.1), name = "Weight in stones")                 
+  ) + 
+  scale_x_date(breaks = "1 week", 
+               minor_breaks = "1 day",
+               labels = scales::date_format("%d %b") 
+               ) + 
+  expand_limits(y = c(65, 80)) +
+  labs(
+    x = "Date",
+    y = "Weight in kg",
+    title = "Minimum morning and maximum evening weight over time",
+    subtitle = "Blue line: BMI of 25. Thicker dashed line: 95% of initial weight; thinner: 90.25% of initial weight. Squares indicate new lowest weights",
+    shape = "Time of day", colour = "Time of day"
+  ) + 
+
+  expand_limits(y = c(70, 80))  + 
+  geom_line(
+    aes(x = day_alone, y = pred),
+    inherit.aes = FALSE,
+    data = modelr::add_predictions(
+      data = tibble(
+        day_alone = seq(
+          lubridate::today(),
+          lubridate::today() + weeks(6),
+          by = '1 day'
+        ),
+        tod = "AM"
+      ), 
+      mod),
+    linetype = "dashed"
+  )
+
+
+ggsave("weight_chart_projection.png", height = 20, width = 30, units = "cm", dpi = 300)
+  
+```
+
+Appears to project 21 October. 
+
+
+Let's try to calculate projected date to 69 kg against last date of observations
+
+
+```{r}
+project_to_weight <- function(dta, last_date, target_weight = 69, window = seq(ymd("2020-08-01"), ymd("2020-12-31"), by = '1 day')){
+  mod <- dta %>% 
+    filter(day_alone <= last_date) %>% 
+    lm(min_max_weight ~ day_alone + tod, data = .)
+
+  fake_data <- tibble(
+    day_alone = window, tod = "AM"
+  ) 
+  
+  preds <- modelr::add_predictions(fake_data, mod)
+  
+  pred_target_date <- preds %>% 
+    filter(pred < target_weight) %>% 
+    pull(day_alone) %>% 
+    pluck(1) %>% 
+    as.character()
+  
+  return(pred_target_date)
+}
+
+
+projections_by_date <- 
+  tibble(
+    last_date = seq(
+      dmy("1-9-2020"), today(), by = '1 day'
+    )
+  ) %>% 
+  mutate(projection_date = map_chr(last_date, project_to_weight, dta = delta_data)) %>% 
+  mutate(projection_date  = ymd(projection_date))
+
+
+
+
+```
+
+Visualise
+
+```{r}
+projections_by_date %>% 
+  ggplot(aes(last_date, projection_date)) +
+  geom_point() + 
+  geom_line() + 
+  scale_x_date(breaks = "1 week", 
+               minor_breaks = "1 day",
+               labels = scales::date_format("%d %b") 
+  ) + 
+  scale_y_date(breaks = "1 week", 
+               minor_breaks = "1 day",
+               labels = scales::date_format("%d %b") 
+  ) 
+
+```
 
 And linear regression
 
