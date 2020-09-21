@@ -156,6 +156,7 @@ delta_data %>%
     y = "Weight in kg",
     title = "Minimum morning and maximum evening weight over time",
     subtitle = "Blue line: BMI of 25. Thicker dashed line: 95% of initial weight; thinner: 90.25% of initial weight. Squares indicate new lowest weights",
+    caption = "Red vertical bars indicate range of measures (black dots) in morning. Lowest value is used",
     shape = "Time of day", colour = "Time of day"
   ) + 
 
@@ -299,9 +300,14 @@ projections_by_date %>%
                labels = scales::date_format("%d %b") 
   ) +
   labs(
+    title = "Projected date to 69kg",
+    subtitle = "Based on linear regression up to date specified on x axis",
     x = "Last date included in projection",
     y = "First date on which 69kg weight first achieved"
-  )
+  ) + 
+  geom_abline(slope = 1, intercept = 0)
+
+ggsave("projected_date_to_69kg.png", height = 15, width = 25, units = "cm", dpi = 300)
 
 ```
 
