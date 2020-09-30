@@ -351,7 +351,9 @@ summary(mod3)
 anova(mod2, mod3)
 
 ```
-No convincing evidence ( p < 0.01 etc) of a systemic weekend effect, though indications of slightly higher weekend weights. (+ 0.3 kg) 
+So now there is evidence of a weekend effect, with weekends associated with around +0.4kg compared with weekday trends. This suggests the weekend effect should be included in the model. 
+
+
 
 
 # Weekly summaries 
