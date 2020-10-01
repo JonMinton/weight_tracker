@@ -253,6 +253,8 @@ project_to_weight <- function(dta, last_date, target_weight = 69, window = seq(y
   mod <- dta %>% 
     filter(day_alone <= last_date) %>% 
     lm(min_max_weight ~ day_alone + tod, data = .)
+  
+  mod_adj_rsq <- broom::glance(mod)$adj.r.squared[1] 
 
   fake_data <- tibble(
     day_alone = window, tod = "AM"
@@ -260,13 +262,18 @@ project_to_weight <- function(dta, last_date, target_weight = 69, window = seq(y
   
   preds <- modelr::add_predictions(fake_data, mod)
   
+
+
+  
   pred_target_date <- preds %>% 
     filter(pred < target_weight) %>% 
     pull(day_alone) %>% 
     pluck(1) %>% 
     as.character()
   
-  return(pred_target_date)
+  output <- list(pred_target_date = pred_target_date, adj_r_sq = mod_adj_rsq)
+  
+  return(output)
 }
 
 
@@ -276,8 +283,10 @@ projections_by_date <-
       dmy("17-8-2020"), today(), by = '1 day'
     )
   ) %>% 
-  mutate(projection_date = map_chr(last_date, project_to_weight, dta = delta_data)) %>% 
-  mutate(projection_date  = ymd(projection_date))
+  mutate(mod_output = map(last_date, project_to_weight, dta = delta_data)) %>% 
+  unnest_wider(mod_output) %>% 
+  mutate(projection_date  = ymd(pred_target_date)) %>% 
+  select(-pred_target_date)
 
 
 
@@ -289,7 +298,7 @@ Visualise
 ```{r}
 projections_by_date %>% 
   ggplot(aes(last_date, projection_date)) +
-  geom_point() + 
+  geom_point(aes(size = adj_r_sq), alpha = 0.5) + 
   geom_line() + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
@@ -303,9 +312,13 @@ projections_by_date %>%
     title = "Projected date to 69kg",
     subtitle = "Based on linear regression up to date specified on x axis",
     x = "Last date included in projection",
-    y = "Expected First date on which 69kg achieved"
+    y = "Expected First date on which 69kg achieved",
+    caption = "Size of points indicates model fit (larger = better fit)"
   ) + 
-  geom_abline(slope = 1, intercept = 0)
+  geom_abline(slope = 1, intercept = 0) + 
+  theme(
+    legend.position = "none"
+  )
 
 ggsave("projected_date_to_69kg.png", height = 15, width = 25, units = "cm", dpi = 300)
 
