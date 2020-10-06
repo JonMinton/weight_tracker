@@ -14,7 +14,7 @@ This will track and try to make sense of changes in weight over time. The data w
 
 ```{r}
 pacman::p_load(
-  openxlsx, tidyverse, plotly, lubridate
+  openxlsx, tidyverse, plotly, lubridate, gganimate
 )
 
 ```
@@ -242,8 +242,20 @@ ggsave("weight_chart_projection.png", height = 20, width = 30, units = "cm", dpi
   
 ```
 
-Appears to project 21 October. 
+Appears to project 22 October. 
 
+
+# Attempt at animated reveal plot 
+
+* Difficult 
+* One element at a time 
+* maybe just min weights?
+
+
+
+
+
+# Projection to 69kg
 
 Let's try to calculate projected date to 69 kg against last date of observations
 
