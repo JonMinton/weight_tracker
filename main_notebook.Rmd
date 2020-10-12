@@ -314,7 +314,8 @@ projections_by_date %>%
   geom_line() + 
   scale_x_date(breaks = "1 week", 
                minor_breaks = "1 day",
-               labels = scales::date_format("%d %b") 
+               labels = scales::date_format("%d %b"),
+               limits = c(dmy("15-08-2020"), dmy("15-11-2020"))
   ) + 
   scale_y_date(breaks = "1 week", 
                minor_breaks = "1 day",
@@ -376,7 +377,7 @@ summary(mod3)
 anova(mod2, mod3)
 
 ```
-So now there is evidence of a weekend effect, with weekends associated with around +0.4kg compared with weekday trends. This suggests the weekend effect should be included in the model. 
+So now there is evidence of a weekend effect, with weekends associated with around +0.5kg compared with weekday trends. This suggests the weekend effect should be included in the model. 
 
 
 
@@ -420,6 +421,7 @@ mdls_by_week %>%
   filter(week > 31) %>% 
   mutate(Regimen = case_when(
     week <  36 ~ "Time-restricted feeding",
+    week == 40 ~ "Fast and Feast",
     week >= 36 ~ "Vegetarian Keto",
     TRUE       ~ NA_character_
     ) 
@@ -500,10 +502,10 @@ mdls_by_fortnight %>%
   ) %>% 
   filter(week > 31) %>% 
   mutate(Regimen = case_when(
-    week <  36 ~ "1. Time-restricted feeding",
-    week == 36 ~ "2. Mixed",
-    week >  36 ~ "3. Vegetarian Keto",
-    TRUE       ~ NA_character_
+    week <  36          ~ "1. Time-restricted feeding",
+    week %in% c(36, 40) ~ "2. Mixed",
+    week >  36          ~ "3. Vegetarian Keto",
+    TRUE                ~ NA_character_
     ) 
   ) %>% 
   mutate(term = case_when(
