@@ -513,6 +513,7 @@ mdls_by_week %>%
   mutate(Regimen = case_when(
     week <  36 ~ "Time-restricted feeding",
     week == 41 ~ "Fast and Feast",
+    week >= 43 ~ "Veg Keto + Soup",
     week >= 36 ~ "Vegetarian Keto",
     TRUE       ~ NA_character_
     ) 
@@ -594,7 +595,7 @@ mdls_by_fortnight %>%
   filter(week > 31) %>% 
   mutate(Regimen = case_when(
     week <  36          ~ "1. Time-restricted feeding",
-    week %in% c(36, 41, 42) ~ "2. Mixed",
+    week %in% c(36, 41, 42, 43) ~ "2. Mixed",
     week >  36          ~ "3. Vegetarian Keto",
     TRUE                ~ NA_character_
     ) 
