@@ -470,9 +470,23 @@ anova(mod2, mod3)
 ```
 So now there is evidence of a weekend effect, with weekends associated with around +0.5kg compared with weekday trends. This suggests the weekend effect should be included in the model. 
 
+Does weekend effect persist if TOD included?
 
+```{r}
+mod4 <- lm(min_max_weight ~ day_alone + is_weekend + tod, 
+           data = delta_data %>% 
+             mutate(is_weekend = case_when(
+               lubridate::wday(day_alone) %in% c(1, 7) ~ TRUE,
+               TRUE ~ FALSE
+             ))
+             )
 
+summary(mod4)
 
+anova(mod3, mod4)
+
+```
+Yes. The effect of weekend is stronger (|t| greater) when tod included too. 
 # Weekly summaries 
 
 
